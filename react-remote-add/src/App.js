@@ -8,12 +8,34 @@ const addRemote = async (a, b) =>
 
 // 请实现本地的add方法，调用 addRemote，能最优的实现输入数字的加法。
 async function add(...inputs) {
-  // 使用map拿到所有addRemote方法返回的promise形成中间数组,然后Promise.all在所有中间数组子项都resolve后得到静态数组,最后reduce求值
   try {
-    let promiseArr = inputs.map(it => addRemote(0, it))
-    let arr = await Promise.all(promiseArr)
-    // console.log(arr)
-    const result = arr.reduce((a, b) => a + b)
+    // 1. 模拟遍历: (单线程)
+    // let result = inputs[0]
+    // for (let i = 1; i < inputs.length; i++) {
+    //   let val = await addRemote(inputs[i], 0)
+    //   result += val
+    // }
+
+    // 2. 模拟遍历, 使用二分法传参, 缩短一半promise.resolve时间 (双线程)
+    let result = inputs[0]
+    for (let i = 1, j = inputs.length - 1; i <= j; i++, j--) {
+      let val
+      if (i == j) {
+        val = await addRemote(inputs[i], 0)
+      } else {
+        val = await addRemote(inputs[i], inputs[j])
+      }
+      result += val
+    }
+
+    // 3. Promise.all (多线程, 所有promise都resolve后统一返回结果)
+    // 使用map拿到所有addRemote方法返回的promise形成中间数组, 然后Promise.all在所有中间数组子项都resolve后得到静态数组, 最后reduce求值
+    //       (但其实这个Promise.all只是为了用addRemote而用, 并没有实现真正的add方法,相当于直接对源数组做reduce)
+    // let promiseArr = inputs.map(it => addRemote(it, 0))
+    // let arr = await Promise.all(promiseArr)
+    // // console.log(arr)
+    // const result = arr.reduce((a, b) => a + b)
+
     return result
   } catch (err) {
     throw new Error("输入值格式有误" + err)
