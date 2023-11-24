@@ -17,16 +17,16 @@ async function add(...inputs) {
     // }
 
     // 2. 模拟遍历, 使用二分法传参, 缩短一半promise.resolve时间 (双线程)
-    let result = inputs[0]
-    for (let i = 1, j = inputs.length - 1; i <= j; i++, j--) {
-      let val
-      if (i == j) {
-        val = await addRemote(inputs[i], 0)
-      } else {
-        val = await addRemote(inputs[i], inputs[j])
-      }
-      result += val
-    }
+    // let result = inputs[0]
+    // for (let i = 1, j = inputs.length - 1; i <= j; i++, j--) {
+    //   let val
+    //   if (i === j) {
+    //     val = await addRemote(inputs[i], 0)
+    //   } else {
+    //     val = await addRemote(inputs[i], inputs[j])
+    //   }
+    //   result += val
+    // }
 
     // 3. Promise.all (多线程, 所有promise都resolve后统一返回结果)
     // 使用map拿到所有addRemote方法返回的promise形成中间数组, 然后Promise.all在所有中间数组子项都resolve后得到静态数组, 最后reduce求值
@@ -35,6 +35,33 @@ async function add(...inputs) {
     // let arr = await Promise.all(promiseArr)
     // // console.log(arr)
     // const result = arr.reduce((a, b) => a + b)
+
+    // 4. 递归 (多线程, 最快)
+    // 每个线程pop出2项相加,resolve后把结果push进目标数组,只要当前数组长度大于1,则继续递归;数组长度为1,则resolve出这一项作为结果
+    let result = new Promise(res => {
+      let count = 0
+      const needAdd = inputs.length - 1
+      while (inputs.length > 1) {
+        addTwo()
+      }
+
+      function addTwo() {
+        if (inputs.length >= 2) {
+          let a = inputs.pop()
+          let b = inputs.pop()
+          // console.log("调用addRemote")
+          addRemote(a, b).then(num => {
+            inputs.push(num)
+            count++
+            if (count === needAdd) {
+              res(inputs[0])
+            } else {
+              addTwo()
+            }
+          })
+        }
+      }
+    })
 
     return result
   } catch (err) {
